@@ -1,0 +1,10 @@
+{
+  "items": [
+    {"name": "钙片", "aliases": ["钙", "补钙"], "low": 20, "high": 180, "unit": "元/瓶"},
+    {"name": "蛋白粉", "aliases": ["蛋白质粉"], "low": 80, "high": 400, "unit": "元/罐"},
+    {"name": "灵芝孢子粉", "aliases": ["孢子粉", "灵芝"], "low": 50, "high": 600, "unit": "元/盒"},
+    {"name": "阿胶", "aliases": [], "low": 80, "high": 800, "unit": "元"},
+    {"name": "助听器", "aliases": [], "low": 200, "high": 8000, "unit": "元"},
+    {"name": "血压计", "aliases": [], "low": 80, "high": 600, "unit": "元"}
+  ]
+}

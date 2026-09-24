@@ -1,0 +1,37 @@
+{
+  "keywords": [
+    {"word": "转账", "score": 25},
+    {"word": "汇款", "score": 25},
+    {"word": "验证码", "score": 20},
+    {"word": "不要告诉", "score": 30},
+    {"word": "不许说", "score": 30},
+    {"word": "保密", "score": 15},
+    {"word": "公检法", "score": 35},
+    {"word": "公安局", "score": 30},
+    {"word": "检察院", "score": 30},
+    {"word": "法院", "score": 20},
+    {"word": "冻结", "score": 25},
+    {"word": "安全账户", "score": 40},
+    {"word": "保证金", "score": 25},
+    {"word": "退税", "score": 20},
+    {"word": "中奖", "score": 20},
+    {"word": "刷单", "score": 25},
+    {"word": "投资", "score": 10},
+    {"word": "讲座", "score": 15},
+    {"word": "免费旅游", "score": 20},
+    {"word": "专家推荐", "score": 15},
+    {"word": "限时", "score": 10},
+    {"word": "不让子女知道", "score": 35},
+    {"word": "55岁", "score": 15},
+    {"word": "立刻", "score": 10},
+    {"word": "现在就", "score": 10}
+  ],
+  "combo_rules": [
+    {
+      "id": "urgent_transfer_no_verify",
+      "need": ["紧急或立刻", "转账或汇款或安全账户", "不让核实或不许说或不要告诉"],
+      "score": 40,
+      "note": "紧急+要钱+隔离核实"
+    }
+  ]
+}
