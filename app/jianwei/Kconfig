@@ -1,0 +1,31 @@
+menuconfig JIANWEI
+	tristate "见微随身证 (Jianwei ID card agent)"
+	default n
+	depends on NET
+	---help---
+		Chest-card: BOOT verify/guard/help, /dev/video0 photo,
+		/dev/audio/pcm_in0 listen, HTTP to cloud skills (same JSON as Arduino).
+
+if JIANWEI
+
+config JIANWEI_PROGNAME
+	string "Program name"
+	default "jianwei"
+
+config JIANWEI_PRIORITY
+	int "Task priority"
+	default 100
+
+config JIANWEI_STACKSIZE
+	int "Stack size"
+	default 32768
+
+config JIANWEI_CLOUD_HOST
+	string "Cloud IPv4 (do not use 127.0.0.1)"
+	default "192.168.1.10"
+
+config JIANWEI_CLOUD_PORT
+	int "Cloud TCP port"
+	default 8787
+
+endif

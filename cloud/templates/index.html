@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <title>见微·随身证</title>
+  <style>
+    :root { --bg:#f4efe6; --card:#fffdf8; --ink:#2b2118; --muted:#7a6a5a; --high:#b42318; --mid:#b54708; --low:#067647; --line:#eadfce; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; background:var(--bg); color:var(--ink); }
+    header { padding:20px 24px 8px; }
+    h1 { margin:0; font-size:26px; }
+    .sub { color:var(--muted); margin-top:6px; font-size:15px; }
+    #packPreview { max-width:100%; max-height:160px; margin-top:8px; border-radius:10px; display:none; }
+    .wrap { display:grid; gap:16px; padding:16px 24px 40px; grid-template-columns: 1fr 1fr; }
+    @media (max-width:900px) { .wrap { grid-template-columns:1fr; } }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; }
+    textarea { width:100%; min-height:110px; border-radius:10px; border:1px solid var(--line); padding:10px; font-size:16px; }
+    button { background:#2b2118; color:#fff; border:0; border-radius:10px; padding:10px 14px; cursor:pointer; font-size:15px; }
+    .row { display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+    .pill { display:inline-block; padding:4px 10px; border-radius:999px; background:#efe6d8; font-size:12px; }
+    .high { color:var(--high); } .mid { color:var(--mid); } .low { color:var(--low); }
+    .event { border-top:1px solid var(--line); padding:10px 0; }
+    .muted { color:var(--muted); font-size:13px; }
+    pre { white-space:pre-wrap; font-family:inherit; margin:8px 0 0; font-size:15px; }
+    .dot { display:inline-block; width:10px; height:10px; border-radius:50%; background:#bbb; margin-right:6px; }
+    .dot.on { background:#067647; }
+    .dot.help { background:#b42318; }
+    .level { font-size:28px; font-weight:700; margin:10px 0 4px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>见微·随身证</h1>
+    <div class="sub">翻开验真 · 合上守护 · 包装识话术（不鉴定真假药）· 板子按键与播报 · 子女摘要</div>
+  </header>
+  <div class="wrap">
+    <section class="card">
+      <h2>1. 验真</h2>
+      <p class="muted">板子翻开拍照成功后，读到的字会填进下面并自动出结果。也可在网页打字或上传照片。不是药检。</p>
+      <textarea id="verifyText"></textarea>
+      <div class="row">
+        <button onclick="run('verify')">开始验真</button>
+        <button class="ghost" onclick="fillVerify()">填入演示文案</button>
+      </div>
+      <div class="row" style="margin-top:12px;align-items:center">
+        <input id="packFile" type="file" accept="image/*" capture="environment" />
+        <button onclick="runPackPhoto()">识别包装照片</button>
+      </div>
+      <img id="packPreview" alt="包装预览" />
+      <div id="verifyOut"></div>
+    </section>
+    <section class="card">
+      <h2>2. 守护</h2>
+      <p class="muted">板子进入守护后屏上 TALK：对着麦说完，再短按 BOOT。听写会填进下面并自动出结果。最长约 8 秒。</p>
+      <textarea id="guardText"></textarea>
+      <div class="row">
+        <button onclick="run('guard')">开始守护判断</button>
+        <button class="ghost" onclick="fillGuard()">填入演示话术</button>
+        <button onclick="listenGuard()">听 5 秒（电脑麦克风）</button>
+      </div>
+      <div id="guardOut"></div>
+    </section>
+    <section class="card">
+      <h2>3. 设备</h2>
+      <p><span class="dot" id="dot"></span>
+        模式 <b id="devMode">{{ device.mode }}</b>
+        · 在线 <b id="devOnline">{{ '是' if device.online else '否' }}</b>
+        · 求助 <b id="devHelp">{{ '是' if device.help else '否' }}</b>
+      </p>
+      <div class="row">
+        <button class="ghost" onclick="setMode('verify')">网页切到验真</button>
+        <button class="ghost" onclick="setMode('guard')">网页切到守护</button>
+        <button class="ghost" onclick="simHelp()">模拟长按求助</button>
+        <button class="ghost" onclick="clearHelp()">清除求助</button>
+      </div>
+      <p class="muted">短按 BOOT 松开：立即切验真/守护。守护时说完再短按结束录音。长按 BOOT ≥0.8 秒求助子女。</p>
+    </section>
+    <section class="card">
+      <h2>4. 子女摘要</h2>
+      <div id="events"></div>
+    </section>
+  </div>
+<script>
+if (window.speechSynthesis) speechSynthesis.cancel();
+function fillVerify(){
+  verifyText.value = "社区讲座专家推荐纳米钙片，说包治骨质疏松，内部批文，现价2880元，限时抢，不让告诉子女。";
+}
+function fillGuard(){
+  guardText.value = "来电话的人说是公安局的，我的卡要被冻结，让我立刻转到安全账户，还说不要告诉儿子，保密。";
+}
+function render(el, data){
+  if (data.error && !data.level) {
+    el.innerHTML = `<p class="high">${data.error}</p>`;
+    return;
+  }
+  const extra = (data.followups || data.steps || []).map(x => "· " + x).join("\n");
+  const ocr = data.ocr_text ? `<p class="muted">图上读到的字</p><pre>${String(data.ocr_text).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}</pre>` : "";
+  const asr = data.asr_text ? `<p class="muted">听到的话</p><pre>${String(data.asr_text).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}</pre>` : "";
+  const warn = data.ocr_warning ? `<p class="mid">${data.ocr_warning}</p>` : "";
+  el.innerHTML = `<div class="level ${data.level}">${data.level_label||""}</div>
+    <p class="muted">分数 ${data.score} · ${data.engine||"rules"}${data.source==="packaging_photo"?" · 包装照片":""}</p>
+    ${warn}
+    ${ocr}
+    ${asr}
+    <pre>${(data.reasons||[]).map(r=>"· "+r).join("\n")}</pre>
+    <pre>${data.advice||""}</pre>
+    ${extra ? `<pre>${extra}</pre>` : ""}`;
+  if (data && data.id) lastSyncedId = data.id;
+}
+async function runPackPhoto(){
+  const input = document.getElementById("packFile");
+  const out = document.getElementById("verifyOut");
+  if (!input.files || !input.files[0]) {
+    out.innerHTML = `<p class="high">请先选择或拍摄一张包装照片</p>`;
+    return;
+  }
+  const fd = new FormData();
+  fd.append("image", input.files[0]);
+  out.innerHTML = `<p class="muted">正在读图并套用验真规则…</p>`;
+  const res = await fetch("/api/verify-image", {method:"POST", body:fd});
+  const data = await res.json();
+  if (data.ocr_text) document.getElementById("verifyText").value = data.ocr_text;
+  render(out, data);
+  refresh();
+}
+document.getElementById("packFile").addEventListener("change", (ev) => {
+  const f = ev.target.files && ev.target.files[0];
+  const img = document.getElementById("packPreview");
+  if (!f) { img.style.display = "none"; return; }
+  img.src = URL.createObjectURL(f);
+  img.style.display = "block";
+});
+async function listenGuard(){
+  const out = document.getElementById("guardOut");
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    out.innerHTML = `<p class="high">当前浏览器不能录音</p>`;
+    return;
+  }
+  out.innerHTML = `<p class="muted">正在听 5 秒，请大声说电话内容…</p>`;
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    const ctx = new AudioContext({sampleRate:16000});
+    const src = ctx.createMediaStreamSource(stream);
+    const proc = ctx.createScriptProcessor(4096, 1, 1);
+    const chunks = [];
+    const silent = ctx.createGain();
+    silent.gain.value = 0;
+    src.connect(proc);
+    proc.connect(silent);
+    silent.connect(ctx.destination);
+    proc.onaudioprocess = (e) => { chunks.push(new Float32Array(e.inputBuffer.getChannelData(0))); };
+    await new Promise((r) => setTimeout(r, 5000));
+    proc.disconnect(); src.disconnect(); silent.disconnect();
+    stream.getTracks().forEach((t) => t.stop());
+    await ctx.close();
+    let n = 0;
+    chunks.forEach((c) => n += c.length);
+    const pcm = new Int16Array(n);
+    let o = 0;
+    chunks.forEach((c) => {
+      for (let i = 0; i < c.length; i++) {
+        const x = Math.max(-1, Math.min(1, c[i]));
+        pcm[o++] = x < 0 ? x * 0x8000 : x * 0x7fff;
+      }
+    });
+    const wav = encodeWav(pcm, 16000);
+    const fd = new FormData();
+    fd.append("audio", new Blob([wav], {type:"audio/wav"}), "guard.wav");
+    const res = await fetch("/api/guard-audio", {method:"POST", body:fd});
+    const data = await res.json();
+    if (data.asr_text) document.getElementById("guardText").value = data.asr_text;
+    render(out, data);
+    refresh();
+  } catch (e) {
+    if (stream) stream.getTracks().forEach((t) => t.stop());
+    out.innerHTML = `<p class="high">录音失败：${e.message||e}</p>`;
+  }
+}
+function encodeWav(pcm, rate){
+  const n = pcm.byteLength;
+  const buf = new ArrayBuffer(44 + n);
+  const v = new DataView(buf);
+  const w = (o,s)=>{ for (let i=0;i<s.length;i++) v.setUint8(o+i, s.charCodeAt(i)); };
+  w(0,"RIFF"); v.setUint32(4, 36+n, true); w(8,"WAVE"); w(12,"fmt ");
+  v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
+  v.setUint32(24,rate,true); v.setUint32(28,rate*2,true); v.setUint16(32,2,true); v.setUint16(34,16,true);
+  w(36,"data"); v.setUint32(40,n,true);
+  new Uint8Array(buf, 44).set(new Uint8Array(pcm.buffer));
+  return buf;
+}
+async function run(kind){
+  const text = document.getElementById(kind+"Text").value;
+  const res = await fetch("/api/"+kind, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({text})});
+  render(document.getElementById(kind+"Out"), await res.json());
+  refresh();
+}
+async function setMode(mode){
+  await fetch("/api/device/mode", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({mode})});
+  refresh();
+}
+async function simHelp(){
+  await fetch("/api/device/heartbeat", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({mode:"guard", help:true})});
+  refresh();
+}
+async function clearHelp(){
+  await fetch("/api/help/clear", {method:"POST"});
+  refresh();
+}
+let lastSyncedId = "";
+let lastPhotoTs = 0;
+function applyBoardResult(data){
+  if (!data || !data.id || data.id === lastSyncedId) return;
+  lastSyncedId = data.id;
+  if (data.kind === "verify") {
+    const text = (data.ocr_text || data.text || "").trim();
+    if (text) document.getElementById("verifyText").value = text;
+    render(document.getElementById("verifyOut"), data);
+  } else if (data.kind === "guard") {
+    const text = (data.asr_text || data.text || "").trim();
+    if (text) document.getElementById("guardText").value = text;
+    render(document.getElementById("guardOut"), data);
+  }
+}
+async function refresh(){
+  const d = await fetch("/api/device").then(r=>r.json());
+  const ev = await fetch("/api/events").then(r=>r.json());
+  document.getElementById("devMode").textContent = d.mode;
+  document.getElementById("devOnline").textContent = d.online ? "是" : "否";
+  document.getElementById("devHelp").textContent = d.help ? "是" : "否";
+  const dot = document.getElementById("dot");
+  dot.className = "dot" + (d.help ? " help" : d.online ? " on" : "");
+  document.getElementById("events").innerHTML = (ev||[]).slice(0,12).map(e =>
+    `<div class="event"><span class="pill">${e.kind}</span> <b class="${e.level}">${e.level_label}</b>
+     <span class="muted">${e.time||""}</span><pre>${e.advice||""}</pre></div>`
+  ).join("");
+  if (d.photo_ts && d.photo_ts !== lastPhotoTs) {
+    lastPhotoTs = d.photo_ts;
+    const img = document.getElementById("packPreview");
+    img.src = "/api/device/photo?t=" + encodeURIComponent(d.photo_ts);
+    img.style.display = "block";
+  }
+  applyBoardResult(d.last_result);
+}
+fillVerify();
+fillGuard();
+refresh();
+setInterval(refresh, 1000);
+</script>
+</body>
+</html>
